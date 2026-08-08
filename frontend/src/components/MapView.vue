@@ -70,7 +70,7 @@ const extractCoords = (doc: SubmissionDoc): { lat: number; lng: number } | null 
     const lng = loc.longitude ?? loc.lng;
     if (typeof lat === 'number' && typeof lng === 'number') raw = { lat, lng };
   } else if (typeof doc.data?.latitude === 'number' && typeof doc.data?.longitude === 'number') {
-    raw = { lat: doc.data.latitude as number, lng: doc.data.longitude as number };
+    raw = { lat: doc.data.latitude, lng: doc.data.longitude };
   }
 
   if (!raw) return null;

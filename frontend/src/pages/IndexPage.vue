@@ -944,7 +944,7 @@ const onConflictResolved = () => {
 
 // Admin handlers
 const adminSubmissions = ref<SubmissionDoc[]>([]);
-const handleOpenAdmin = async () => {
+const handleOpenAdmin = () => {
   void router.push('/dashboard');
 };
 

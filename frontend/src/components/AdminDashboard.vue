@@ -993,7 +993,12 @@ const dynamicSelectStats = computed<DynamicSelectStat[]>(() => {
     subs.forEach((sub) => {
       const val = sub.data?.[field.id];
       if (val !== undefined && val !== null && val !== '') {
-        const valStr = String(val);
+        const valStr =
+          typeof val === 'string'
+            ? val
+            : typeof val === 'number' || typeof val === 'boolean'
+              ? String(val)
+              : JSON.stringify(val);
         countsMap[valStr] = (countsMap[valStr] || 0) + 1;
         filledCount++;
       }

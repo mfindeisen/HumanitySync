@@ -304,7 +304,7 @@ const loadDashboardData = async () => {
 
 const handleLogout = () => {
   authStore.logout();
-  router.push('/');
+  void router.push('/');
 };
 
 onMounted(async () => {
