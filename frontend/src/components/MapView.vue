@@ -4,6 +4,18 @@
     <div v-if="loading" class="absolute-full bg-dark-transparent flex flex-center z-top">
       <q-spinner-dots color="primary" size="40px" />
     </div>
+
+    <!-- Anonymization Mode Toggle Badge -->
+    <div class="absolute-top-right q-ma-sm" style="z-index: 1000">
+      <q-badge
+        :color="isAnonymized ? 'indigo-7' : 'grey-8'"
+        class="q-pa-xs text-caption cursor-pointer shadow-2"
+        @click="isAnonymized = !isAnonymized"
+      >
+        <q-icon :name="isAnonymized ? 'visibility_off' : 'visibility'" class="q-mr-xs" />
+        {{ isAnonymized ? 'Geodata Anonymized (~1km Grid)' : 'Exact GPS Coordinates' }}
+      </q-badge>
+    </div>
   </div>
 </template>
 
@@ -18,14 +30,18 @@ const props = withDefaults(
     singleLocation?: { latitude: number; longitude: number; accuracy?: number | undefined } | null;
     height?: string;
     interactive?: boolean;
+    anonymize?: boolean;
   }>(),
   {
     submissions: () => [],
     singleLocation: null,
     height: '450px',
     interactive: false,
+    anonymize: false,
   },
 );
+
+const isAnonymized = ref(props.anonymize);
 
 const emit = defineEmits<{
   (e: 'selectLocation', loc: { latitude: number; longitude: number }): void;
@@ -37,12 +53,13 @@ const loading = ref(false);
 let map: L.Map | null = null;
 let markersLayer: L.LayerGroup | null = null;
 
-// Helper: Extract lat/lng from submission data
+// Helper: Extract lat/lng from submission data and apply coarsening when anonymized
 const extractCoords = (doc: SubmissionDoc): { lat: number; lng: number } | null => {
-  if (!doc.data) return null;
+  let raw: { lat: number; lng: number } | null = null;
 
-  // Case 1: 'location' object with latitude & longitude
-  if (doc.data.location && typeof doc.data.location === 'object') {
+  if (doc.metadata?.location && typeof doc.metadata.location.latitude === 'number') {
+    raw = { lat: doc.metadata.location.latitude, lng: doc.metadata.location.longitude };
+  } else if (doc.data?.location && typeof doc.data.location === 'object') {
     const loc = doc.data.location as {
       latitude?: number;
       longitude?: number;
@@ -51,18 +68,22 @@ const extractCoords = (doc: SubmissionDoc): { lat: number; lng: number } | null 
     };
     const lat = loc.latitude ?? loc.lat;
     const lng = loc.longitude ?? loc.lng;
-    if (typeof lat === 'number' && typeof lng === 'number') return { lat, lng };
+    if (typeof lat === 'number' && typeof lng === 'number') raw = { lat, lng };
+  } else if (typeof doc.data?.latitude === 'number' && typeof doc.data?.longitude === 'number') {
+    raw = { lat: doc.data.latitude as number, lng: doc.data.longitude as number };
   }
 
-  // Case 2: Separate 'latitude' & 'longitude' fields
-  if (typeof doc.data.latitude === 'number' && typeof doc.data.longitude === 'number') {
-    return { lat: doc.data.latitude, lng: doc.data.longitude };
-  }
-  if (typeof doc.data.lat === 'number' && typeof doc.data.lng === 'number') {
-    return { lat: doc.data.lat, lng: doc.data.lng };
+  if (!raw) return null;
+
+  if (isAnonymized.value) {
+    // Coarsen coordinates to 2 decimal places (~1.1km grid precision)
+    return {
+      lat: Math.round(raw.lat * 100) / 100,
+      lng: Math.round(raw.lng * 100) / 100,
+    };
   }
 
-  return null;
+  return raw;
 };
 
 // Create custom pin icon based on status
@@ -195,7 +216,7 @@ const updateMarkers = () => {
 };
 
 watch(
-  () => [props.submissions, props.singleLocation],
+  () => [props.submissions, props.singleLocation, isAnonymized.value],
   () => {
     updateMarkers();
   },

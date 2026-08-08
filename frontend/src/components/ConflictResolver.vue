@@ -383,10 +383,30 @@ const handleSaveResolution = async () => {
       }
     });
 
-    // 1. Create the merged document
+    // Archive losing conflicting revisions non-destructively before purging MVCC branches
+    const archivedConflicts = [
+      ...(localVersion.value.archived_conflicts || []),
+      ...conflictingVersions.value.map((conf) => ({
+        rev: conf._rev,
+        surveyor_id: conf.metadata?.surveyor_id,
+        updated_at: conf.metadata?.updated_at,
+        data: conf.data,
+      })),
+    ];
+
+    const currentTrail = localVersion.value.metadata?.audit_trail || [];
+    const auditEntry = {
+      user_id: localVersion.value.metadata?.surveyor_id || 'user',
+      action: 'conflict_resolved' as const,
+      timestamp: new Date().toISOString(),
+      note: `Resolved MVCC conflict between local revision ${localVersion.value._rev} and ${conflictingVersions.value.length} remote revision(s)`,
+    };
+
+    // 1. Create the merged document with non-destructive archived conflicts and audit log
     const resolvedDoc: SubmissionDoc = {
       ...localVersion.value,
       data: resolvedData,
+      archived_conflicts: archivedConflicts,
       sync_state: {
         synced: false,
         device_id: localVersion.value.sync_state.device_id,
@@ -395,13 +415,14 @@ const handleSaveResolution = async () => {
       metadata: {
         ...localVersion.value.metadata,
         updated_at: new Date().toISOString(),
+        audit_trail: [...currentTrail, auditEntry],
       },
     };
 
     // 2. Write the resolved version
     await dbWrapper.value.put(resolvedDoc as unknown as Record<string, unknown>);
 
-    // 3. Remove all losing conflicting revisions
+    // 3. Clean up the resolved CouchDB conflict branches
     const rawDb = dbWrapper.value.getRawDb();
     for (const confDoc of conflictingVersions.value) {
       if (confDoc._rev) {
