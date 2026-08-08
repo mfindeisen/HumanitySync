@@ -723,7 +723,7 @@ const passwordInput = ref('password');
 
 // Demo logins feature flag (configurable via QCLI_ENABLE_DEMO_LOGINS env var)
 const enableDemoLogins = ref(
-  process.env.QCLI_ENABLE_DEMO_LOGINS !== undefined
+  typeof process !== 'undefined' && process.env && process.env.QCLI_ENABLE_DEMO_LOGINS !== undefined
     ? process.env.QCLI_ENABLE_DEMO_LOGINS === 'true'
     : true,
 );
