@@ -176,6 +176,13 @@ export default {
   val_max_length: 'must not exceed',
   val_max_length_chars: 'characters.',
   input_placeholder: 'Input...',
-  number_placeholder: 'Enter value...',
   btn_save_entry: 'Save Entry',
+  informed_consent_title: 'Humanitarian Data Protection & Informed Consent',
+  informed_consent_desc:
+    'Beneficiaries must be informed of the purpose of data collection, confidentiality measures, and their right to request data deletion under international humanitarian standards.',
+  informed_consent_checkbox: 'Beneficiary has granted informed consent for data collection',
+  informed_consent_required:
+    'Informed consent is required before submitting humanitarian assessment data.',
+  btn_save_draft: 'Save Draft (Local)',
+  btn_finalize_submit: 'Finalize & Submit',
 };

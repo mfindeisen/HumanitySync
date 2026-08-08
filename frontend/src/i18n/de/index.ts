@@ -176,6 +176,13 @@ export default {
   val_max_length: 'darf maximal',
   val_max_length_chars: 'Zeichen lang sein.',
   input_placeholder: 'Eingabe...',
-  number_placeholder: 'Wert eingeben...',
   btn_save_entry: 'Eintrag Speichern',
+  informed_consent_title: 'Datenschutz & Informierte Einwilligung',
+  informed_consent_desc:
+    'Der Begünstigte wurde über den Zweck der Datenerfassung, Vertraulichkeitsmaßnahmen und das Recht auf Löschung gemäß internationalen humanitären Standards aufgeklärt.',
+  informed_consent_checkbox: 'Begünstigter hat der Datenerfassung ausdrücklich zugestimmt',
+  informed_consent_required:
+    'Die informierte Einwilligung ist vor dem Absenden der Erfassung zwingend erforderlich.',
+  btn_save_draft: 'Entwurf Speichern (Lokal)',
+  btn_finalize_submit: 'Abschließen & Absenden',
 };

@@ -175,6 +175,12 @@ export default {
   val_max_length: 'يجب ألا يتجاوز',
   val_max_length_chars: 'حروف.',
   input_placeholder: 'أدخل البيانات...',
-  number_placeholder: 'أدخل القيمة الرقمية...',
   btn_save_entry: 'حفظ السجل',
+  informed_consent_title: 'حماية البيانات الإنسانية والموافقة المستنيرة',
+  informed_consent_desc:
+    'تم إبلاغ المستفيد بالغرض من جمع البيانات وإجراءات السرية وحقه في طلب حذف البيانات وفقاً للمعايير الإنسانية الدولية.',
+  informed_consent_checkbox: 'منح المستفيد موافقة صريحة ومستنيرة لجمع البيانات',
+  informed_consent_required: 'الموافقة المستنيرة مطلوبة قبل إرسال التقييم الإنساني.',
+  btn_save_draft: 'حفظ كمسودة (محلي)',
+  btn_finalize_submit: 'إنهاء وإرسال',
 };

@@ -177,6 +177,12 @@ export default {
   val_max_length: 'dikare herî zêde',
   val_max_length_chars: 'tîp be.',
   input_placeholder: 'Nivîsandin...',
-  number_placeholder: 'Hejmarê binivîse...',
   btn_save_entry: 'Qeydê Tomar Bike',
+  informed_consent_title: 'Parastina Daneyên Humanîtarî & Pejirandina Agahdar',
+  informed_consent_desc:
+    'Sûdwergirtî li ser mebesta komkirina daneyan, tedbîrên nepeniyê û mafê daxwaza jêbirina daneyan li gorî pîvanên navneteweyî hatiye agahdarkirin.',
+  informed_consent_checkbox: 'Sûdwergirtî razîbûna xwe ya zelal daye bo komkirina daneyan',
+  informed_consent_required: 'Pejirandina agahdar berî şandina nirxandina humanîtarî pêwîst e.',
+  btn_save_draft: 'Wekî Reşnivîs Tomar Bike (Herêmî)',
+  btn_finalize_submit: 'Bi Dawî Bîne & Bişîne',
 };

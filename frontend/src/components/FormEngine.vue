@@ -291,7 +291,28 @@
       </template>
     </div>
 
-    <div class="row justify-end q-gutter-sm q-pt-md">
+    <!-- Informed Consent Banner & Checkbox -->
+    <q-card
+      bordered
+      class="q-pa-md q-mt-lg border-indigo-4"
+      :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-indigo-1'"
+    >
+      <div class="row items-center gap-2 text-subtitle2 text-bold text-indigo">
+        <q-icon name="verified_user" size="20px" />
+        {{ $t('informed_consent_title') }}
+      </div>
+      <p class="text-caption text-grey-7 q-mt-xs q-mb-sm">
+        {{ $t('informed_consent_desc') }}
+      </p>
+      <q-checkbox
+        v-model="informedConsentGranted"
+        color="indigo"
+        :label="$t('informed_consent_checkbox')"
+        class="text-weight-bold"
+      />
+    </q-card>
+
+    <div class="row justify-between items-center q-pt-md flex-wrap gap-2">
       <q-btn
         type="button"
         flat
@@ -303,9 +324,31 @@
       >
         {{ $t('cancel') }}
       </q-btn>
-      <q-btn type="submit" color="primary" class="text-weight-bold q-px-md" no-caps icon="save">
-        {{ $t('btn_save_entry') }}
-      </q-btn>
+
+      <div class="row q-gutter-sm">
+        <q-btn
+          type="button"
+          outline
+          color="indigo-5"
+          class="text-weight-bold q-px-md"
+          no-caps
+          icon="edit_note"
+          @click="submitForm('draft')"
+        >
+          {{ $t('btn_save_draft') }}
+        </q-btn>
+
+        <q-btn
+          type="submit"
+          color="primary"
+          class="text-weight-bold q-px-md"
+          no-caps
+          icon="check_circle"
+          :disable="!informedConsentGranted"
+        >
+          {{ $t('btn_finalize_submit') }}
+        </q-btn>
+      </div>
     </div>
   </q-form>
 </template>
@@ -328,7 +371,14 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'save', data: Record<string, unknown>): void;
+  (
+    e: 'save',
+    payload: {
+      data: Record<string, unknown>;
+      status: 'draft' | 'completed';
+      informedConsentGranted: boolean;
+    },
+  ): void;
   (e: 'cancel'): void;
 }>();
 
@@ -336,6 +386,7 @@ const { t } = useI18n();
 const formData = ref<Record<string, unknown>>({});
 const gpsLoading = ref<Record<string, boolean>>({});
 const gpsError = ref<Record<string, string>>({});
+const informedConsentGranted = ref(true);
 
 const getTextFieldModel = (id: string) => {
   return computed({
@@ -574,13 +625,24 @@ const getRules = (field: FormField) => {
   return rules;
 };
 
-const onSubmit = () => {
+const submitForm = (status: 'draft' | 'completed' = 'completed') => {
+  if (status === 'completed' && !informedConsentGranted.value) {
+    return;
+  }
   const cleanData: Record<string, unknown> = {};
   props.template.fields.forEach((field) => {
     if (field.type !== 'section' && checkCondition(field)) {
       cleanData[field.id] = formData.value[field.id];
     }
   });
-  emit('save', cleanData);
+  emit('save', {
+    data: cleanData,
+    status,
+    informedConsentGranted: informedConsentGranted.value,
+  });
+};
+
+const onSubmit = () => {
+  submitForm('completed');
 };
 </script>
