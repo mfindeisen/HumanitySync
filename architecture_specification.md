@@ -1,6 +1,6 @@
-# Technical Architecture Specification & System Design: Offline-First Low-Code Platform for NGOs in Kurdistan (HumanitySync)
+# Technical Architecture Specification & System Design: Offline-First Low-Code Platform for NGOs (HumanitySync)
 
-This document defines the detailed system design and technical architecture for **HumanitySync**, an offline-first low-code data collection platform designed for NGOs. The architecture is specifically tailored to address the infrastructural challenges in the Kurdistan Region of Iraq (KRI) and similar crisis or development contexts (frequent power grid switches, "Ampere switch" power interruptions, high cellular data costs, and remote field deployments without network coverage).
+This document defines the detailed system design and technical architecture for **HumanitySync**, an offline-first low-code data collection platform designed for NGOs. The architecture is specifically tailored to address the infrastructural challenges and similar crisis or development contexts (frequent power grid switches, "Ampere switch" power interruptions, high cellular data costs, and remote field deployments without network coverage).
 
 ---
 
