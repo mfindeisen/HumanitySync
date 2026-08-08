@@ -236,6 +236,7 @@ import axios from 'axios';
 
 import { useDatabase } from '../composables/useDatabase';
 import type { SubmissionDoc } from '../composables/useDatabase';
+import { useAuthStore } from '../stores/authStore';
 import AdminDashboard from '../components/AdminDashboard.vue';
 import SimulatorPanel from '../components/SimulatorPanel.vue';
 
@@ -278,22 +279,12 @@ const setLanguage = (code: string) => {
   locale.value = code;
 };
 
-const token = ref<string | null>(localStorage.getItem('token'));
-const user = ref<{ id: string; name: string; role: string } | null>(null);
+const authStore = useAuthStore();
+const token = computed(() => authStore.token);
+const user = computed(() => authStore.user);
 
 const { dbWrapper, syncStatus, syncError, templates, fetchTemplates } = useDatabase();
 const adminSubmissions = ref<SubmissionDoc[]>([]);
-
-const fetchUserProfile = async () => {
-  try {
-    const res = await axios.get('/api/auth/me');
-    user.value = res.data.user;
-  } catch (err) {
-    console.error('Failed to fetch user profile:', err);
-    token.value = null;
-    localStorage.removeItem('token');
-  }
-};
 
 const loadDashboardData = async () => {
   try {
@@ -312,17 +303,13 @@ const loadDashboardData = async () => {
 };
 
 const handleLogout = () => {
-  token.value = null;
-  user.value = null;
-  localStorage.removeItem('token');
-  delete axios.defaults.headers.common['Authorization'];
+  authStore.logout();
   router.push('/');
 };
 
 onMounted(async () => {
   if (token.value) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
-    await fetchUserProfile();
     await loadDashboardData();
   }
 });

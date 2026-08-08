@@ -662,7 +662,8 @@ import axios from 'axios';
 import CryptoJS from 'crypto-js';
 
 import { useDatabase } from '../composables/useDatabase';
-import type { SubmissionDoc, TemplateDoc } from '../composables/useDatabase';
+import type { SubmissionDoc, TemplateDoc, AuditEntry } from '../composables/useDatabase';
+import { useAuthStore } from '../stores/authStore';
 import FormEngine from '../components/FormEngine.vue';
 import ConflictResolver from '../components/ConflictResolver.vue';
 import SimulatorPanel from '../components/SimulatorPanel.vue';
@@ -711,12 +712,14 @@ watch(currentDir, (dir) => {
 });
 
 // Authentication & Session
-const token = ref<string | null>(localStorage.getItem('token'));
-const user = ref<{ id: string; name: string; role: string } | null>(null);
+const authStore = useAuthStore();
+const token = computed(() => authStore.token);
+const user = computed(() => authStore.user);
+const authError = computed(() => authStore.authError);
+const authLoading = computed(() => authStore.authLoading);
+
 const usernameInput = ref('surveyor1');
 const passwordInput = ref('password');
-const authError = ref<string | null>(null);
-const authLoading = ref(false);
 
 // Demo logins feature flag (configurable via QCLI_ENABLE_DEMO_LOGINS env var)
 const enableDemoLogins = ref(
@@ -757,72 +760,31 @@ const view = ref<'field' | 'admin'>('field');
 // Load user profile on launch if token is stored
 onMounted(() => {
   document.documentElement.setAttribute('dir', currentDir.value);
-  if (token.value) {
+  if (token.value && user.value) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
-    void fetchUserProfile();
+    const key = authStore.deriveEncryptionKey('password');
+    initializeDbConnection(user.value.id, key, user.value.role);
   }
 });
 
-const fetchUserProfile = async () => {
-  try {
-    const res = await axios.get<{ user: { id: string; name: string; role: string } }>(
-      '/api/auth/me',
-    );
-    user.value = res.data.user;
-
-    // Auto-setup database (salt key seed)
-    initializeDbConnection(res.data.user.id, 'password', res.data.user.role);
-  } catch (err) {
-    console.error('Failed to load user profile:', err);
-    handleLogout();
-  }
-};
-
 const handleLogin = async () => {
-  authLoading.value = true;
-  authError.value = null;
-
   try {
-    const res = await axios.post<{
-      token: string;
-      user: { id: string; name: string; role: string };
-    }>('/api/auth/login', {
-      username: usernameInput.value,
-      password: passwordInput.value,
-    });
-
-    const { token: userToken, user: userData } = res.data;
-    localStorage.setItem('token', userToken);
-    token.value = userToken;
-    user.value = userData;
-
-    axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
-
-    // Derive DB encryption key securely
-    const derivedKey = CryptoJS.SHA256(passwordInput.value).toString();
-    initializeDbConnection(userData.id, derivedKey, userData.role);
-  } catch (err: unknown) {
-    console.error(err);
-    let msg = t('login_failed');
-    if (axios.isAxiosError(err) && err.response?.data?.error) {
-      msg = String(err.response.data.error);
+    const key = await authStore.login(usernameInput.value, passwordInput.value);
+    if (user.value) {
+      initializeDbConnection(user.value.id, key, user.value.role);
     }
-    authError.value = msg;
-  } finally {
-    authLoading.value = false;
+  } catch (err) {
+    console.error('Login Error:', err);
   }
 };
 
 const handleLogout = () => {
-  localStorage.removeItem('token');
-  token.value = null;
-  user.value = null;
+  authStore.logout();
   clearDbState();
   activeTemplate.value = null;
   editingSubmission.value = null;
   conflictDoc.value = null;
   view.value = 'field';
-  delete axios.defaults.headers.common['Authorization'];
 };
 
 // Connections
@@ -874,14 +836,36 @@ const cancelFormEdit = () => {
   editingSubmission.value = null;
 };
 
-const handleSaveForm = async (data: Record<string, unknown>) => {
+const handleSaveForm = async (
+  payload:
+    | { data: Record<string, unknown>; status?: 'draft' | 'completed' }
+    | Record<string, unknown>,
+) => {
   if (!dbWrapper.value || !user.value || (!activeTemplate.value && !editingSubmission.value))
     return;
+
+  const data =
+    'data' in payload && typeof payload.data === 'object' && payload.data !== null
+      ? (payload.data as Record<string, unknown>)
+      : (payload as Record<string, unknown>);
+  const status: 'draft' | 'completed' =
+    'status' in payload && (payload.status === 'draft' || payload.status === 'completed')
+      ? payload.status
+      : 'completed';
 
   const templateId = activeTemplate.value
     ? activeTemplate.value._id
     : editingSubmission.value!.template_id;
   const deviceId = 'tablet_field_' + user.value.name.toLowerCase().replace(/\s/g, '_');
+
+  const now = new Date().toISOString();
+  const currentTrail = editingSubmission.value?.metadata?.audit_trail || [];
+  const newAuditEntry: AuditEntry = {
+    user_id: user.value.id,
+    action: editingSubmission.value ? 'updated' : 'created',
+    timestamp: now,
+    note: `Submission saved as ${status}`,
+  };
 
   let newDoc: SubmissionDoc;
 
@@ -890,14 +874,16 @@ const handleSaveForm = async (data: Record<string, unknown>) => {
     newDoc = {
       ...editingSubmission.value,
       data,
+      status,
       sync_state: {
         synced: false,
         device_id: deviceId,
-        last_attempt: new Date().toISOString(),
+        last_attempt: now,
       },
       metadata: {
         ...editingSubmission.value.metadata,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
+        audit_trail: [...currentTrail, newAuditEntry],
       },
     };
   } else {
@@ -907,15 +893,16 @@ const handleSaveForm = async (data: Record<string, unknown>) => {
       _id: submissionId,
       type: 'submission',
       template_id: templateId,
-      status: 'completed',
+      status,
       sync_state: {
         synced: false,
         device_id: deviceId,
       },
       metadata: {
         surveyor_id: user.value.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: now,
+        updated_at: now,
+        audit_trail: [newAuditEntry],
       },
       data,
     };
