@@ -29,7 +29,7 @@ export default {
   templates_info_version: 'Version',
   templates_info_fields: 'Fields',
   footer:
-    'HumanitySync Platform • Erbil - Dohuk - Sulaymaniyah Operations • Resilient Offline Database Synchronization',
+    'HumanitySync Platform • Resilient Offline Database Synchronization',
 
   // Login
   login_title: 'Login & Decrypt',

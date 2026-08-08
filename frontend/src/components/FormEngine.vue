@@ -386,7 +386,7 @@ const { t } = useI18n();
 const formData = ref<Record<string, unknown>>({});
 const gpsLoading = ref<Record<string, boolean>>({});
 const gpsError = ref<Record<string, string>>({});
-const informedConsentGranted = ref(true);
+const informedConsentGranted = ref(false);
 
 const getTextFieldModel = (id: string) => {
   return computed({
