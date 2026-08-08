@@ -77,6 +77,26 @@
       </div>
     </div>
 
+    <!-- Low-Data / Satellite Mode Toggle Card -->
+    <q-card
+      bordered
+      class="q-pa-sm q-mb-md border"
+      :class="$q.dark.isActive ? 'bg-grey-10 border-indigo-9' : 'bg-indigo-1 border-indigo-3'"
+    >
+      <div class="row items-center justify-between">
+        <div class="row items-center gap-2">
+          <q-icon name="satellite_alt" color="indigo-5" size="20px" />
+          <div class="text-left">
+            <div class="text-caption text-bold text-indigo">Low-Data / Satellite Sync Mode</div>
+            <div class="text-caption text-grey-6" style="font-size: 0.75rem">
+              Pauses background sync to save costly metered satellite bandwidth
+            </div>
+          </div>
+        </div>
+        <q-toggle v-model="lowDataModeActive" color="indigo-5" @update:model-value="toggleLowData" />
+      </div>
+    </q-card>
+
     <!-- Sync Info -->
     <div
       :class="$q.dark.isActive ? 'bg-black border-grey-9' : 'bg-grey-2 border-grey-4'"
@@ -118,10 +138,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import axios from 'axios';
 import PouchDB from 'pouchdb';
+import { useDatabase } from '../composables/useDatabase';
 
 const props = defineProps<{
   isOnline: boolean;
@@ -136,11 +157,22 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { lowDataMode, setLowDataMode } = useDatabase();
 
+const lowDataModeActive = ref(lowDataMode.value);
 const simulatingAmpere = ref(false);
 const ampereCountdown = ref(0);
 const conflictLoading = ref(false);
 const simLog = ref<string[]>([]);
+
+const toggleLowData = (val: boolean) => {
+  setLowDataMode(val);
+  addLog(
+    val
+      ? '🛰️ Low-Data / Satellite Mode activated (Background sync paused)'
+      : '📶 Standard Network Mode activated (Auto-sync live)',
+  );
+};
 
 onMounted(() => {
   simLog.value = [t('sim_init')];
