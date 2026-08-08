@@ -655,6 +655,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import axios from 'axios';
@@ -667,6 +668,7 @@ import ConflictResolver from '../components/ConflictResolver.vue';
 import SimulatorPanel from '../components/SimulatorPanel.vue';
 import AdminDashboard from '../components/AdminDashboard.vue';
 
+const router = useRouter();
 const $q = useQuasar();
 const isDark = ref(localStorage.getItem('theme') !== 'light');
 $q.dark.set(isDark.value);
@@ -956,19 +958,7 @@ const onConflictResolved = () => {
 // Admin handlers
 const adminSubmissions = ref<SubmissionDoc[]>([]);
 const handleOpenAdmin = async () => {
-  view.value = 'admin';
-  try {
-    const response = await axios.get<{ submissions: SubmissionDoc[] }>('/api/admin/submissions');
-    if (dbWrapper.value) {
-      adminSubmissions.value = response.data.submissions.map((doc) =>
-        dbWrapper.value!.decryptDocument(doc),
-      );
-    } else {
-      adminSubmissions.value = response.data.submissions;
-    }
-  } catch (err) {
-    console.error('Failed to fetch admin data:', err);
-  }
+  void router.push('/dashboard');
 };
 
 const setLanguage = (code: string) => {

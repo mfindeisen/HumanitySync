@@ -43,11 +43,11 @@
 
     <!-- Submissions Panel -->
     <div v-if="activeTab === 'submissions'" class="q-gutter-y-md">
-      <!-- Quick Metrics -->
+      <!-- Universal Platform Metrics -->
       <div class="row q-col-gutter-md">
         <!-- Total Records -->
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card bordered class="text-left">
+          <q-card bordered class="text-left shadow-1">
             <q-card-section class="row items-center justify-between">
               <div>
                 <span
@@ -64,63 +64,179 @@
           </q-card>
         </div>
 
-        <!-- Critical -->
+        <!-- Form Templates -->
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card bordered class="text-left" style="border-color: rgba(239, 68, 68, 0.35)">
+          <q-card bordered class="text-left shadow-1">
             <q-card-section class="row items-center justify-between">
               <div>
                 <span
                   class="text-caption uppercase text-grey-6 text-bold"
                   style="letter-spacing: 0.05em"
-                  >{{ $t('metric_critical') }}</span
+                  >{{ $t('metric_templates') }}</span
                 >
-                <span class="text-h5 text-bold text-red q-mt-xs" style="display: block">{{
-                  criticalShelterCount
+                <span class="text-h5 text-bold text-indigo q-mt-xs" style="display: block">{{
+                  totalTemplates
                 }}</span>
               </div>
-              <q-icon name="bar_chart" color="red" size="28px" />
+              <q-icon name="assignment" color="indigo" size="28px" />
             </q-card-section>
           </q-card>
         </div>
 
-        <!-- Damaged -->
+        <!-- Revision Conflicts -->
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card bordered class="text-left" style="border-color: rgba(234, 179, 8, 0.35)">
+          <q-card
+            bordered
+            class="text-left shadow-1"
+            :style="{ borderColor: pendingConflictsCount > 0 ? 'rgba(239, 68, 68, 0.5)' : '' }"
+          >
             <q-card-section class="row items-center justify-between">
               <div>
                 <span
                   class="text-caption uppercase text-grey-6 text-bold"
                   style="letter-spacing: 0.05em"
-                  >{{ $t('metric_damaged') }}</span
+                  >{{ $t('metric_conflicts') }}</span
                 >
-                <span class="text-h5 text-bold text-warning q-mt-xs" style="display: block">{{
-                  damagedShelterCount
-                }}</span>
+                <span
+                  class="text-h5 text-bold q-mt-xs"
+                  :class="pendingConflictsCount > 0 ? 'text-red' : 'text-positive'"
+                  style="display: block"
+                  >{{ pendingConflictsCount }}</span
+                >
               </div>
-              <q-icon name="bar_chart" color="warning" size="28px" />
+              <q-icon
+                name="sync_problem"
+                :color="pendingConflictsCount > 0 ? 'red' : 'positive'"
+                size="28px"
+              />
             </q-card-section>
           </q-card>
         </div>
 
-        <!-- Avg Family Members -->
+        <!-- Field Workers -->
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card bordered class="text-left">
+          <q-card bordered class="text-left shadow-1">
             <q-card-section class="row items-center justify-between">
               <div>
                 <span
                   class="text-caption uppercase text-grey-6 text-bold"
                   style="letter-spacing: 0.05em"
-                  >{{ $t('metric_family_size') }}</span
+                  >{{ $t('metric_surveyors') }}</span
                 >
-                <span class="text-h5 text-bold text-purple-3 q-mt-xs" style="display: block">{{
-                  avgFamilySize
+                <span class="text-h5 text-bold text-teal q-mt-xs" style="display: block">{{
+                  uniqueSurveyorsCount
                 }}</span>
               </div>
-              <q-icon name="visibility" color="purple-3" size="28px" />
+              <q-icon name="people" color="teal" size="28px" />
             </q-card-section>
           </q-card>
         </div>
       </div>
+
+      <!-- Form Filter & Dynamic Schema Analytics Section -->
+      <q-card bordered class="q-pa-md shadow-1">
+        <div class="row items-center justify-between q-mb-xs" style="gap: 12px">
+          <div class="row items-center gap-2">
+            <q-icon name="tune" color="indigo-5" size="22px" />
+            <h3 class="text-subtitle1 text-bold q-my-none">{{ $t('filter_form_template') }}</h3>
+          </div>
+          <div style="min-width: 240px; max-width: 360px" class="col-12 col-sm-auto">
+            <q-select
+              v-model="selectedFormFilter"
+              :options="formFilterOptions"
+              emit-value
+              map-options
+              dense
+              outlined
+              :dark="$q.dark.isActive"
+              options-dense
+            />
+          </div>
+        </div>
+
+        <!-- Dynamic Field Analytics Section -->
+        <div
+          v-if="dynamicSelectStats.length > 0 || dynamicNumericStats.length > 0"
+          class="q-mt-md"
+        >
+          <div
+            class="text-caption text-grey-5 text-bold uppercase q-mb-xs"
+            style="letter-spacing: 0.05em"
+          >
+            {{ $t('dynamic_field_analytics') }}
+          </div>
+
+          <div class="row q-col-gutter-md q-mt-xs">
+            <!-- Dynamic Select Field Breakdown Cards -->
+            <div
+              v-for="stat in dynamicSelectStats"
+              :key="stat.fieldId"
+              class="col-12 col-sm-6 col-md-4"
+            >
+              <q-card
+                bordered
+                flat
+                class="q-pa-sm"
+                :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-1'"
+              >
+                <div
+                  class="text-caption text-bold text-indigo-4 row items-center justify-between"
+                >
+                  <span>{{ stat.fieldLabel }}</span>
+                  <q-badge color="indigo" class="text-caption">Option Breakdown</q-badge>
+                </div>
+                <div class="q-mt-xs q-gutter-y-xs">
+                  <div
+                    v-for="opt in stat.options"
+                    :key="opt.value"
+                    class="row items-center justify-between text-caption"
+                  >
+                    <span class="text-grey-5">{{ opt.label }}:</span>
+                    <span class="text-bold">
+                      {{ opt.count }}
+                      <span class="text-grey-6 text-weight-normal">({{ opt.percentage }}%)</span>
+                    </span>
+                  </div>
+                </div>
+              </q-card>
+            </div>
+
+            <!-- Dynamic Numeric Field Stat Cards -->
+            <div
+              v-for="nStat in dynamicNumericStats"
+              :key="nStat.fieldId"
+              class="col-12 col-sm-6 col-md-4"
+            >
+              <q-card
+                bordered
+                flat
+                class="q-pa-sm"
+                :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-1'"
+              >
+                <div
+                  class="text-caption text-bold text-purple-4 row items-center justify-between"
+                >
+                  <span>{{ nStat.fieldLabel }}</span>
+                  <q-badge color="purple" class="text-caption">Numeric Metrics</q-badge>
+                </div>
+                <div class="q-mt-xs row justify-between text-caption">
+                  <div>
+                    <span class="text-grey-5 block">Average:</span>
+                    <span class="text-h6 text-bold text-purple-3">{{ nStat.average }}</span>
+                  </div>
+                  <div class="text-right">
+                    <span class="text-grey-5 block">Total (Min-Max):</span>
+                    <span class="text-caption text-bold"
+                      >{{ nStat.total }}
+                      <span class="text-grey-5">({{ nStat.min }}-{{ nStat.max }})</span></span
+                    >
+                  </div>
+                </div>
+              </q-card>
+            </div>
+          </div>
+        </div>
+      </q-card>
 
       <!-- Submissions Table Card -->
       <q-card bordered class="overflow-hidden">
@@ -139,7 +255,7 @@
         </div>
         <q-separator />
 
-        <div v-if="submissions.length === 0" class="text-center q-py-xl">
+        <div v-if="filteredSubmissions.length === 0" class="text-center q-py-xl">
           <q-icon name="cloud_off" color="grey-7" size="3em" class="q-mb-sm" />
           <p class="text-grey-5 text-caption">{{ $t('no_synced_data') }}</p>
         </div>
@@ -149,7 +265,7 @@
           flat
           :dark="$q.dark.isActive"
           style="background-color: transparent"
-          :rows="submissions"
+          :rows="filteredSubmissions"
           :columns="columns"
           row-key="_id"
         >
@@ -796,21 +912,167 @@ const previewTemplate = computed<TemplateDoc>(() => ({
   fields: fields.value,
 }));
 
-// Calculations for Metrics
+// --- Form Template Filter & Dynamic Metrics Engine ---
+const selectedFormFilter = ref<string>('all');
+
+const formFilterOptions = computed(() => {
+  const opts = [{ label: t('filter_all_templates') || 'All Form Schemas', value: 'all' }];
+  props.templates.forEach((tmpl) => {
+    opts.push({
+      label: `${tmpl.title} (v${tmpl.version})`,
+      value: tmpl._id,
+    });
+  });
+  return opts;
+});
+
+// Universal Platform Metrics
 const totalSubmissions = computed(() => props.submissions.length);
-const criticalShelterCount = computed(() => {
-  return props.submissions.filter((s) => s.data?.shelter_condition === 'critical').length;
+const totalTemplates = computed(() => props.templates.length);
+const pendingConflictsCount = computed(() => {
+  return props.submissions.filter((s) => s._conflicts && s._conflicts.length > 0).length;
 });
-const damagedShelterCount = computed(() => {
-  return props.submissions.filter((s) => s.data?.shelter_condition === 'damaged').length;
+const uniqueSurveyorsCount = computed(() => {
+  const surveyors = new Set(props.submissions.map((s) => s.metadata?.surveyor_id).filter(Boolean));
+  return surveyors.size;
 });
-const avgFamilySize = computed(() => {
-  if (totalSubmissions.value === 0) return '0';
-  const total = props.submissions.reduce(
-    (acc, curr) => acc + (Number(curr.data?.family_size) || 0),
-    0,
-  );
-  return (total / totalSubmissions.value).toFixed(1);
+
+// Filtered Submissions based on Form Selection
+const filteredSubmissions = computed(() => {
+  if (selectedFormFilter.value === 'all') return props.submissions;
+  return props.submissions.filter((s) => s.template_id === selectedFormFilter.value);
+});
+
+// Dynamic Schema Analysis & Aggregations
+interface DynamicSelectStat {
+  fieldId: string;
+  fieldLabel: string;
+  options: Array<{ value: string; label: string; count: number; percentage: number }>;
+}
+
+interface DynamicNumericStat {
+  fieldId: string;
+  fieldLabel: string;
+  average: string;
+  total: number;
+  min: number;
+  max: number;
+}
+
+const activeFormTemplate = computed<TemplateDoc | null>(() => {
+  if (selectedFormFilter.value === 'all') return null;
+  return props.templates.find((t) => t._id === selectedFormFilter.value) || null;
+});
+
+const dynamicSelectStats = computed<DynamicSelectStat[]>(() => {
+  const stats: DynamicSelectStat[] = [];
+  const subs = filteredSubmissions.value;
+  if (subs.length === 0) return stats;
+
+  let selectFields: FormField[] = [];
+  if (activeFormTemplate.value) {
+    selectFields = activeFormTemplate.value.fields.filter(
+      (f) => f.type === 'select' || f.type === 'multiselect',
+    );
+  } else {
+    const seenFields = new Map<string, FormField>();
+    props.templates.forEach((t) => {
+      t.fields.forEach((f) => {
+        if ((f.type === 'select' || f.type === 'multiselect') && !seenFields.has(f.id)) {
+          seenFields.set(f.id, f);
+        }
+      });
+    });
+    selectFields = Array.from(seenFields.values());
+  }
+
+  selectFields.forEach((field) => {
+    const countsMap: Record<string, number> = {};
+    let filledCount = 0;
+
+    subs.forEach((sub) => {
+      const val = sub.data?.[field.id];
+      if (val !== undefined && val !== null && val !== '') {
+        const valStr = String(val);
+        countsMap[valStr] = (countsMap[valStr] || 0) + 1;
+        filledCount++;
+      }
+    });
+
+    if (filledCount > 0) {
+      const options = Object.entries(countsMap).map(([optVal, count]) => {
+        const matchingOpt = field.options?.find((o) => o.value === optVal);
+        return {
+          value: optVal,
+          label: matchingOpt?.label || optVal,
+          count,
+          percentage: Math.round((count / filledCount) * 100),
+        };
+      });
+
+      stats.push({
+        fieldId: field.id,
+        fieldLabel: field.label,
+        options,
+      });
+    }
+  });
+
+  return stats;
+});
+
+const dynamicNumericStats = computed<DynamicNumericStat[]>(() => {
+  const stats: DynamicNumericStat[] = [];
+  const subs = filteredSubmissions.value;
+  if (subs.length === 0) return stats;
+
+  let numberFields: FormField[] = [];
+  if (activeFormTemplate.value) {
+    numberFields = activeFormTemplate.value.fields.filter((f) => f.type === 'number');
+  } else {
+    const seenFields = new Map<string, FormField>();
+    props.templates.forEach((t) => {
+      t.fields.forEach((f) => {
+        if (f.type === 'number' && !seenFields.has(f.id)) {
+          seenFields.set(f.id, f);
+        }
+      });
+    });
+    numberFields = Array.from(seenFields.values());
+  }
+
+  numberFields.forEach((field) => {
+    let total = 0;
+    let count = 0;
+    let min = Infinity;
+    let max = -Infinity;
+
+    subs.forEach((sub) => {
+      const rawVal = sub.data?.[field.id];
+      if (rawVal !== undefined && rawVal !== null && rawVal !== '') {
+        const num = Number(rawVal);
+        if (!isNaN(num)) {
+          total += num;
+          count++;
+          if (num < min) min = num;
+          if (num > max) max = num;
+        }
+      }
+    });
+
+    if (count > 0) {
+      stats.push({
+        fieldId: field.id,
+        fieldLabel: field.label,
+        total,
+        average: (total / count).toFixed(1),
+        min: min === Infinity ? 0 : min,
+        max: max === -Infinity ? 0 : max,
+      });
+    }
+  });
+
+  return stats;
 });
 
 // Table columns
