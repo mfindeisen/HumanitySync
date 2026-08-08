@@ -46,13 +46,13 @@ async function initCouchDB() {
     }
   }
 
-  // Make humanitysync database public so client replication works
+  // Configure humanitysync database security
   try {
     await axios.put(`${COUCHDB_URL}/humanitysync/_security`, {
-      admins: { names: [], roles: [] },
-      members: { names: [], roles: [] }
+      admins: { names: ['admin'], roles: ['_admin'] },
+      members: { names: [], roles: ['surveyor', 'project_manager'] }
     });
-    console.log("Database 'humanitysync' security updated to public.");
+    console.log("Database 'humanitysync' security configured successfully.");
   } catch (err) {
     console.error("Failed to update database 'humanitysync' security:", err.message);
   }

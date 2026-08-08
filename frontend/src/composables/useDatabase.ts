@@ -51,13 +51,20 @@ export interface TemplateDoc {
   fields: FormField[];
 }
 
+export interface AuditEntry {
+  user_id: string;
+  action: 'created' | 'updated' | 'conflict_resolved' | 'status_changed';
+  timestamp: string;
+  note?: string;
+}
+
 export interface SubmissionDoc {
   _id: string;
   _rev?: string;
   _conflicts?: string[];
   type: 'submission';
   template_id: string;
-  status: 'draft' | 'completed';
+  status: 'draft' | 'submitted' | 'completed' | 'approved';
   sync_state: {
     synced: boolean;
     last_attempt?: string;
@@ -72,7 +79,9 @@ export interface SubmissionDoc {
       longitude: number;
       accuracy_meters: number;
     };
+    audit_trail?: AuditEntry[];
   };
+  archived_conflicts?: Array<Record<string, unknown>>;
   data: Record<string, unknown>; // encrypted in PouchDB
   decryption_failed?: boolean;
 }
@@ -94,16 +103,43 @@ export class EncryptedPouchWrapper {
     this.encryptionKey = key;
   }
 
+  public async putAttachment(
+    docId: string,
+    attachmentId: string,
+    rev: string,
+    blob: Blob,
+    type: string,
+  ): Promise<PouchDB.Core.Response> {
+    return this.db.putAttachment(docId, attachmentId, rev, blob, type);
+  }
+
+  public async getAttachment(docId: string, attachmentId: string): Promise<Blob | Buffer> {
+    return this.db.getAttachment(docId, attachmentId);
+  }
+
   private encryptDoc<T extends Record<string, unknown>>(doc: T): T {
-    if (doc.type !== 'submission' || !doc.data || !this.encryptionKey) {
+    if (doc.type !== 'submission' || (!doc.data && !doc.encrypted_payload) || !this.encryptionKey) {
       return doc;
     }
 
-    const { data, ...metadataAndSystem } = doc;
-    const ciphertext = CryptoJS.AES.encrypt(JSON.stringify(data), this.encryptionKey).toString();
+    const { data, metadata, ...metadataAndSystem } = doc;
+    const metaObj = (metadata || {}) as Record<string, unknown>;
+    const { location, ...safeMetadata } = metaObj;
+
+    // Encrypt both field responses (data) and sensitive GPS geolocation
+    const payloadToEncrypt = {
+      data: data || {},
+      location: location || null,
+    };
+
+    const ciphertext = CryptoJS.AES.encrypt(
+      JSON.stringify(payloadToEncrypt),
+      this.encryptionKey,
+    ).toString();
 
     return {
       ...metadataAndSystem,
+      metadata: safeMetadata,
       encrypted_payload: ciphertext,
     } as unknown as T;
   }
@@ -115,7 +151,7 @@ export class EncryptedPouchWrapper {
     }
 
     try {
-      const { encrypted_payload, ...metadataAndSystem } = docObj;
+      const { encrypted_payload, metadata, ...metadataAndSystem } = docObj;
       const bytes = CryptoJS.AES.decrypt(encrypted_payload as string, this.encryptionKey);
       const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
 
@@ -123,9 +159,26 @@ export class EncryptedPouchWrapper {
         throw new Error('Invalid decryption key or corrupted data');
       }
 
-      const data = JSON.parse(decryptedString) as Record<string, unknown>;
+      const parsedPayload = JSON.parse(decryptedString) as {
+        data?: Record<string, unknown>;
+        location?: unknown;
+      };
+
+      // Support legacy payload structures as well as new payload structure
+      const data =
+        parsedPayload.data !== undefined
+          ? parsedPayload.data
+          : (parsedPayload as Record<string, unknown>);
+      const location = parsedPayload.location;
+
+      const restoredMetadata = {
+        ...((metadata || {}) as Record<string, unknown>),
+        ...(location ? { location } : {}),
+      };
+
       return {
         ...metadataAndSystem,
+        metadata: restoredMetadata,
         data,
       } as unknown as T;
     } catch (err) {
@@ -202,8 +255,18 @@ export const syncStatus = ref<'idle' | 'syncing' | 'paused' | 'error'>('idle');
 export const syncError = ref<unknown>(null);
 export const submissions = ref<SubmissionDoc[]>([]);
 export const templates = ref<TemplateDoc[]>([]);
+export const lowDataMode = ref<boolean>(localStorage.getItem('hs_low_data_mode') === 'true');
 
 export function useDatabase() {
+  const setLowDataMode = (enabled: boolean) => {
+    lowDataMode.value = enabled;
+    localStorage.setItem('hs_low_data_mode', enabled ? 'true' : 'false');
+    if (enabled) {
+      stopSync();
+      syncStatus.value = 'paused';
+    }
+  };
+
   const initDb = (dbName: string, pin: string) => {
     // derive a key from password/pin
     const key = CryptoJS.SHA256(pin).toString();
@@ -265,8 +328,8 @@ export function useDatabase() {
     syncStatus.value = 'syncing';
 
     syncHandler.value = PouchDB.sync(localDb.value, remoteDb, {
-      live: true,
-      retry: true,
+      live: !lowDataMode.value,
+      retry: !lowDataMode.value,
       back_off_function: (delay) => {
         if (delay === 0) return 1000;
         if (delay < 5000) return delay * 1.5;
@@ -318,6 +381,8 @@ export function useDatabase() {
     syncError,
     submissions,
     templates,
+    lowDataMode,
+    setLowDataMode,
     fetchSubmissions,
     fetchTemplates,
     putSubmission,
