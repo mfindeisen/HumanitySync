@@ -6,7 +6,7 @@
 
 ## Project Status & Overview
 
-**HumanitySync** is a fully functional, production-ready core prototype of an offline-first low-code data collection ecosystem. It enables NGOs and field workers to capture, manage, and synchronize critical field data (such as needs assessments, camp registrations, and distribution logs) without relying on a persistent internet connection or continuous electrical power.
+**HumanitySync** is an early-stage open-source prototype exploring offline-first data collection and synchronization for humanitarian field operations.
 
 ### Key Highlights of Current Implementation
 - **Frontend Stack**: Upgraded and built with **Quasar Framework (Vue 3, Vite, TypeScript, Pinia, Vue I18n)**. Supports Web SPA, PWA, and native mobile containers via **Capacitor**.
